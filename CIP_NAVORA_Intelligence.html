@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CIP — Case Intelligence Engine</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=DM+Mono:wght@400;500&display=swap');
+:root{
+  /* NAVORA brand — ivory · navy · gold */
+  --bg:#f4f2ec;
+  --bg2:#eeece6;
+  --surface:#ffffff;
+  --surface2:#faf9f5;
+  --border:#e2ddd4;
+  --border2:#cec8bc;
+  --navy:#1a2438;
+  --navy2:#243050;
+  --navy3:#2e3c64;
+  --gold:#b48c28;
+  --gold-light:#c8a040;
+  --gold-bg:rgba(180,140,40,.07);
+  --gold-border:rgba(180,140,40,.22);
+  --t1:#1a2438;
+  --t2:#4a5870;
+  --t3:#8090a8;
+  --t4:#b8c4d4;
+  /* Semantic — adjusted for light bg */
+  --sig:#a02020;--sig-bg:rgba(160,32,32,.06);--sig-bd:rgba(160,32,32,.2);
+  --warn:#9c6010;--warn-bg:rgba(156,96,16,.07);--warn-bd:rgba(156,96,16,.2);
+  --conf:#0d6040;--conf-bg:rgba(13,96,64,.07);--conf-bd:rgba(13,96,64,.2);
+  --intel:#1848a0;--intel-bg:rgba(24,72,160,.07);--intel-bd:rgba(24,72,160,.2);
+  --unk:#5030a0;--unk-bg:rgba(80,48,160,.07);--unk-bd:rgba(80,48,160,.2);
+  --mono:'DM Mono',monospace;--sans:'DM Sans',system-ui,sans-serif;
+  --r:6px;--rs:4px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg)}
+body{font-family:var(--sans);color:var(--t1);font-size:12px;display:flex;flex-direction:column}
+
+/* ── HEADER ── */
+.hdr{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  height:46px;display:flex;align-items:center;padding:0 22px;gap:18px;flex-shrink:0;
+}
+.hdr-brand{display:flex;align-items:center;gap:10px}
+.hdr-logo{font-size:14px;font-weight:500;letter-spacing:.18em;color:var(--navy)}
+.hdr-logo em{color:var(--gold-light);font-style:normal}
+.hdr-sub{font-size:9px;letter-spacing:.12em;color:var(--t3);text-transform:uppercase}
+.hdr-sep{width:1px;height:22px;background:var(--border)}
+.hdr-case{font-family:var(--mono);font-size:10px;color:var(--t3);
+  background:var(--bg);border:1px solid var(--border);border-radius:3px;padding:2px 9px}
+.hdr-hyp{display:flex;gap:8px;align-items:center}
+.hdr-hyp-lbl{font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--t3);white-space:nowrap}
+.hpill{font-size:10px;font-weight:500;padding:2px 10px;border-radius:20px;border:1px solid;cursor:pointer}
+.hp-sig{background:var(--sig-bg);border-color:var(--sig-bd);color:var(--sig)}
+.hp-warn{background:var(--warn-bg);border-color:var(--warn-bd);color:var(--warn)}
+.hp-intel{background:var(--intel-bg);border-color:var(--intel-bd);color:var(--intel)}
+.hp-gray{background:transparent;border-color:var(--border);color:var(--t3)}
+.hdr-right{margin-left:auto;display:flex;gap:7px;align-items:center}
+.aflag{font-size:9px;font-weight:500;letter-spacing:.07em;padding:2px 9px;border-radius:3px;border:1px solid}
+.af-sig{background:var(--sig-bg);border-color:var(--sig-bd);color:var(--sig)}
+.af-warn{background:var(--warn-bg);border-color:var(--warn-bd);color:var(--warn)}
+.af-gold{background:var(--gold-bg);border-color:var(--gold-border);color:var(--gold)}
+.af-intel{background:var(--intel-bg);border-color:var(--intel-bd);color:var(--intel)}
+.hdr-ts{font-family:var(--mono);font-size:9px;color:var(--t3)}
+
+/* ── LAYOUT ── */
+.engine{flex:1;display:flex;overflow:hidden}
+
+/* ── CASCADE ── */
+.cascade{
+  width:272px;flex-shrink:0;background:var(--surface);
+  border-right:1px solid var(--border);overflow-y:auto;padding:14px 0;
+}
+.cascade::-webkit-scrollbar{width:3px}
+.cascade::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.sec-label{
+  font-size:9px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--t3);padding:0 16px 10px;
+}
+.cn{position:relative;padding:0 14px 0 34px}
+.cn::before{
+  content:'';position:absolute;left:20px;top:28px;bottom:0;
+  width:1px;background:var(--border);
+}
+.cn:last-child::before{display:none}
+.cn-card{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--r);padding:9px 11px;
+}
+.cn-dot{
+  position:absolute;left:-20px;top:10px;
+  width:10px;height:10px;border-radius:50%;border:1.5px solid;
+}
+.cnd-sig{border-color:var(--sig);background:var(--sig-bg)}
+.cnd-warn{border-color:var(--warn);background:var(--warn-bg)}
+.cnd-conf{border-color:var(--conf);background:var(--conf-bg)}
+.cnd-intel{border-color:var(--intel);background:var(--intel-bg)}
+.cnd-gold{border-color:var(--gold);background:var(--gold-bg)}
+.cnd-miss{border-color:var(--unk);background:transparent;border-style:dashed}
+.cn-yr{font-family:var(--mono);font-size:9px;color:var(--t3);margin-bottom:3px}
+.cn-ttl{font-size:11px;font-weight:500;color:var(--t1);line-height:1.35;margin-bottom:3px}
+.cn-body{font-size:10px;color:var(--t2);line-height:1.45}
+.cn-gap{display:flex;align-items:center;gap:0;padding:3px 0}
+.cn-gap-track{display:flex;flex-direction:column;align-items:center;margin-left:-14px;width:10px}
+.cn-gap-dash{width:1px;height:10px;background:var(--border)}
+.cn-gap-arr{font-size:9px;color:var(--t4);line-height:1}
+.cn-gap-lbl{font-size:9px;color:var(--t3);font-family:var(--mono);margin-left:6px}
+.cn-missed{
+  margin-top:6px;border-radius:var(--rs);padding:6px 9px;
+  background:var(--unk-bg);border:1px dashed var(--unk-bd);
+  font-size:10px;color:var(--unk);line-height:1.4;
+}
+.cn-missed-lbl{font-size:8px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:2px;opacity:.8}
+.cn-contra{
+  margin-top:5px;border-radius:var(--rs);padding:6px 9px;
+  background:var(--warn-bg);border:1px dashed var(--warn-bd);
+  font-size:10px;color:var(--warn);line-height:1.4;
+}
+.cn-contra-lbl{font-size:8px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:2px;opacity:.8}
+.cn-tag{
+  display:inline-block;font-size:8px;font-weight:600;letter-spacing:.06em;
+  padding:1px 7px;border-radius:20px;margin-top:4px;border:1px solid;
+}
+.ct-sig{background:var(--sig-bg);color:var(--sig);border-color:var(--sig-bd)}
+.ct-warn{background:var(--warn-bg);color:var(--warn);border-color:var(--warn-bd)}
+.ct-conf{background:var(--conf-bg);color:var(--conf);border-color:var(--conf-bd)}
+.ct-miss{background:var(--unk-bg);color:var(--unk);border-color:var(--unk-bd)}
+.ct-gold{background:var(--gold-bg);color:var(--gold);border-color:var(--gold-border)}
+
+/* ── GRAPH CENTER ── */
+.graph-wrap{
+  flex:1;position:relative;background:var(--bg);overflow:hidden;
+}
+.gw-label{
+  position:absolute;top:12px;left:16px;z-index:10;
+  font-size:9px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);
+}
+.gw-legend{
+  position:absolute;bottom:12px;left:50%;transform:translateX(-50%);
+  display:flex;gap:18px;z-index:10;background:rgba(244,242,236,.85);
+  padding:5px 14px;border-radius:20px;border:1px solid var(--border);
+}
+.gw-leg-item{display:flex;align-items:center;gap:5px;font-size:9px;color:var(--t3)}
+.gw-leg-dot{width:7px;height:7px;border-radius:50%;border:1.5px solid}
+.gw-leg-line{width:16px;height:1px}
+#rcv{position:absolute;top:0;left:0;width:100%;height:100%}
+.ntip{
+  position:absolute;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);padding:9px 13px;pointer-events:none;z-index:20;
+  max-width:210px;display:none;box-shadow:0 4px 18px rgba(26,36,56,.08);
+  border-left:3px solid var(--gold);
+}
+.ntip-t{font-size:11px;font-weight:500;color:var(--t1);margin-bottom:4px}
+.ntip-b{font-size:10px;color:var(--t2);line-height:1.45}
+.ntip-c{font-size:9px;font-family:var(--mono);color:var(--gold);margin-top:4px}
+
+/* ── RIGHT PANEL ── */
+.gap-panel{
+  width:262px;flex-shrink:0;background:var(--surface);
+  border-left:1px solid var(--border);overflow-y:auto;padding:14px 0;
+}
+.gap-panel::-webkit-scrollbar{width:3px}
+.gap-panel::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.gp-sec{padding:0 13px;margin-bottom:14px}
+.gp-sec-title{
+  font-size:9px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--t3);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border);
+}
+.gi{
+  border-radius:var(--rs);padding:8px 10px;margin-bottom:5px;
+  border-left:2px solid;background:var(--surface2);
+}
+.gi-sig{border-color:var(--sig)}
+.gi-warn{border-color:var(--warn)}
+.gi-intel{border-color:var(--intel)}
+.gi-gold{border-color:var(--gold)}
+.gi-ttl{font-size:11px;font-weight:500;color:var(--t1);line-height:1.35;margin-bottom:3px}
+.gi-why{font-size:10px;color:var(--t2);line-height:1.4}
+.gi-cons{font-size:8px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;margin-top:5px}
+.gc-sig{color:var(--sig)}
+.gc-warn{color:var(--warn)}
+.gc-intel{color:var(--intel)}
+
+/* Contradictions */
+.contra{
+  background:var(--surface2);border:1px solid var(--warn-bd);
+  border-radius:var(--rs);padding:8px 10px;margin-bottom:5px;
+}
+.contra-pair{display:flex;align-items:flex-start;gap:5px;margin-bottom:5px}
+.cv{flex:1;font-size:10px;color:var(--t2);background:var(--bg);padding:3px 6px;border-radius:3px;line-height:1.35}
+.cv-vs{font-size:9px;font-weight:600;color:var(--warn);flex-shrink:0;margin-top:3px}
+.contra-int{font-size:10px;color:var(--warn);line-height:1.4;font-style:italic}
+
+/* Coordination */
+.coo{background:var(--sig-bg);border:1px solid var(--sig-bd);border-radius:var(--rs);padding:7px 10px;margin-bottom:5px}
+.coo-r{font-size:10px;font-weight:500;color:var(--t1);margin-bottom:2px}
+.coo-t{font-size:10px;color:var(--sig);line-height:1.4}
+
+/* ── BOTTOM ── */
+.bottom{
+  height:188px;flex-shrink:0;background:var(--surface);
+  border-top:1px solid var(--border);display:flex;
+}
+.bp{
+  flex:1;padding:12px 16px;border-right:1px solid var(--border);overflow:hidden;
+}
+.bp:last-child{border-right:none}
+.bp-title{
+  font-size:9px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--t3);margin-bottom:8px;
+}
+.chart-wrap{position:relative;height:132px}
+canvas.c{width:100%!important;height:132px!important}
+
+/* Functional domains */
+.fd{display:flex;gap:5px;align-items:flex-end;height:112px;margin-top:8px}
+.fd-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+.fd-bg{flex:1;width:100%;background:var(--bg2);border-radius:3px 3px 0 0;overflow:hidden;display:flex;align-items:flex-end}
+.fd-fill{width:100%;border-radius:3px 3px 0 0}
+.fd-n{font-size:7px;color:var(--t3);text-align:center;line-height:1.2;white-space:nowrap;margin-top:3px}
+.fd-v{font-size:8px;font-family:var(--mono);color:var(--t3);margin-top:1px}
+
+/* Biomarkers */
+.bm{display:flex;flex-direction:column;gap:5px}
+.bm-row{display:flex;align-items:center;gap:8px}
+.bm-n{font-size:9px;font-family:var(--mono);color:var(--t2);width:115px;flex-shrink:0}
+.bm-sp{flex:1;height:22px;position:relative}
+.bm-v{font-size:9px;font-family:var(--mono);font-weight:500;width:60px;text-align:right}
+.bm-s{font-size:8px;font-weight:600;letter-spacing:.05em;width:52px;text-align:center;padding:1px 3px;border-radius:2px;flex-shrink:0;border:1px solid}
+.bs-bad{background:var(--sig-bg);color:var(--sig);border-color:var(--sig-bd)}
+.bs-brd{background:var(--warn-bg);color:var(--warn);border-color:var(--warn-bd)}
+.bs-mis{background:var(--unk-bg);color:var(--unk);border-color:var(--unk-bd)}
+.bs-ok{background:var(--conf-bg);color:var(--conf);border-color:var(--conf-bd)}
+
+/* System index */
+.sxi{display:flex;flex-direction:column;gap:7px}
+.sxi-row{display:flex;flex-direction:column;gap:3px}
+.sxi-hd{display:flex;justify-content:space-between;font-size:9px;color:var(--t3)}
+.sxi-hd span:last-child{font-family:var(--mono)}
+.sxi-track{height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.sxi-fill{height:4px;border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<div class="hdr">
+  <div class="hdr-brand">
+    <div>
+      <div class="hdr-logo">NAVOR<em>A</em></div>
+      <div class="hdr-sub">Intelligence Between Systems</div>
+    </div>
+  </div>
+  <div class="hdr-sep"></div>
+  <div class="hdr-case">P-2026-047</div>
+  <div class="hdr-sep"></div>
+  <div style="font-size:10px;color:var(--t3)">17 J · w · 5 J Verlauf · anonymisiert</div>
+  <div class="hdr-sep"></div>
+  <div class="hdr-hyp">
+    <span class="hdr-hyp-lbl">Leitende Hypothese</span>
+    <span class="hpill hp-sig">Post-COVID → autonom 85%</span>
+    <span class="hpill hp-warn">hEDS-Vulnerabilität 75%</span>
+    <span class="hpill hp-intel">MCAS 60%</span>
+    <span class="hpill hp-gray">APS 30%</span>
+  </div>
+  <div class="hdr-right">
+    <span class="aflag af-sig">⚑ DIAGNOSE BLOCKIERT</span>
+    <span class="aflag af-sig">⚑ KONTRAINDIKATION AKTIV</span>
+    <span class="aflag af-warn">△ 9 LÜCKEN</span>
+    <span class="aflag af-intel">◈ KEIN LEAD-ARZT</span>
+    <div class="hdr-sep"></div>
+    <span class="hdr-ts">Mrz 2026</span>
+  </div>
+</div>
+
+<div class="engine">
+
+<!-- ════════════════════════════════════════
+     LEFT — KAUSALE TRAJEKTORIE
+════════════════════════════════════════ -->
+<div class="cascade">
+  <div class="sec-label">Kausale Krankheitstrajektorie</div>
+
+  <div class="cn">
+    <div class="cn-card">
+      <div class="cn-dot cnd-warn"></div>
+      <div class="cn-yr">2017 – 2020</div>
+      <div class="cn-ttl">Prämorbide Vulnerabilität</div>
+      <div class="cn-body">IgE ↑ ohne Sensibilisierung · Hypermobilität · strukturelles Substrat bereits vorhanden</div>
+      <span class="cn-tag ct-warn">Strukturelle Prädisposition</span>
+    </div>
+  </div>
+  <div class="cn-gap">
+    <div class="cn-gap-track"><div class="cn-gap-dash"></div><div class="cn-gap-arr">↓</div></div>
+    <span class="cn-gap-lbl">~1 Jahr</span>
+  </div>
+
+  <div class="cn">
+    <div class="cn-card" style="border-color:var(--sig-bd)">
+      <div class="cn-dot cnd-sig"></div>
+      <div class="cn-yr">2021 — Trigger-Ereignis</div>
+      <div class="cn-ttl">COVID-Infektion (nicht serologisch bestätigt)</div>
+      <div class="cn-body">Klinisch konsistentes Post-COVID-Bild. Formale Serologie fehlt bis heute.</div>
+      <div class="cn-missed">
+        <div class="cn-missed-lbl">⚑ Diagnose-Blockade</div>
+        COVID-IgG nie abgenommen. ME/CFS formal nicht kodierbar. Spezialzugang blockiert.
+      </div>
+    </div>
+  </div>
+  <div class="cn-gap">
+    <div class="cn-gap-track"><div class="cn-gap-dash"></div><div class="cn-gap-arr">↓</div></div>
+    <span class="cn-gap-lbl">3 – 6 Monate</span>
+  </div>
+
+  <div class="cn">
+    <div class="cn-card">
+      <div class="cn-dot cnd-sig"></div>
+      <div class="cn-yr">2021 – 2022</div>
+      <div class="cn-ttl">Autonome Dysregulation</div>
+      <div class="cn-body">POTS-Muster beginnend. Orthostase, Tachykardie, cerebrale Hypoperfusion. Als systemischer Beginn nicht erkannt.</div>
+      <span class="cn-tag ct-sig">POTS gesichert</span>
+    </div>
+  </div>
+  <div class="cn-gap">
+    <div class="cn-gap-track"><div class="cn-gap-dash"></div><div class="cn-gap-arr">↓</div></div>
+    <span class="cn-gap-lbl">+12 – 18 Monate</span>
+  </div>
+
+  <div class="cn">
+    <div class="cn-card" style="border-color:var(--unk-bd)">
+      <div class="cn-dot cnd-miss"></div>
+      <div class="cn-yr">2022 – 2023 — Verpasstes Fenster</div>
+      <div class="cn-ttl">ME/CFS-Kriterien erfüllt — nicht erkannt</div>
+      <div class="cn-body">PEM, Fatigue, autonome Instabilität. ICC 2011 Pflichtkriterien alle erfüllt.</div>
+      <div class="cn-missed">
+        <div class="cn-missed-lbl">⚠ Verpasste Chance</div>
+        Frühdiagnose hätte GET-Schaden verhindert. Stattdessen: Aktivierungstherapie.
+      </div>
+      <div class="cn-contra">
+        <div class="cn-contra-lbl">△ Aktiver Schaden</div>
+        Physiotherapie-Aktivierung trotz PEM — Verschlechterung wahrscheinlich.
+      </div>
+    </div>
+  </div>
+  <div class="cn-gap">
+    <div class="cn-gap-track"><div class="cn-gap-dash"></div><div class="cn-gap-arr">↓</div></div>
+    <span class="cn-gap-lbl">+8 Monate</span>
+  </div>
+
+  <div class="cn">
+    <div class="cn-card">
+      <div class="cn-dot cnd-sig"></div>
+      <div class="cn-yr">Mai 2024</div>
+      <div class="cn-ttl">Leukopenie — Ätiologie ungeklärt</div>
+      <div class="cn-body">Akuter Leukozyten-Abfall. Immundysregulation? Koinzidenz mit Schub nie untersucht.</div>
+      <span class="cn-tag ct-miss">Ätiologie offen</span>
+    </div>
+  </div>
+  <div class="cn-gap">
+    <div class="cn-gap-track"><div class="cn-gap-dash"></div><div class="cn-gap-arr">↓</div></div>
+    <span class="cn-gap-lbl">+9 Monate</span>
+  </div>
+
+  <div class="cn">
+    <div class="cn-card">
+      <div class="cn-dot cnd-intel"></div>
+      <div class="cn-yr">Feb 2025</div>
+      <div class="cn-ttl">Strukturelle Differenzialdiagnosen ausgeschlossen</div>
+      <div class="cn-body">Myopathie, MG, metabolisch, Neuropathie — alles negativ. Systemdiagnose noch nicht gestellt.</div>
+      <span class="cn-tag ct-conf">Ausschluss-Fortschritt</span>
+    </div>
+  </div>
+  <div class="cn-gap">
+    <div class="cn-gap-track"><div class="cn-gap-dash"></div><div class="cn-gap-arr">↓</div></div>
+    <span class="cn-gap-lbl">+8 Monate</span>
+  </div>
+
+  <div class="cn">
+    <div class="cn-card">
+      <div class="cn-dot cnd-sig"></div>
+      <div class="cn-yr">Okt 2025</div>
+      <div class="cn-ttl">Mikronährstoffkollaps</div>
+      <div class="cn-body">Ferritin 20 · VitD 28 · Kalium 3.4 · TSH 3.83. Keine Therapieeskalation trotz bekannter Befunde.</div>
+      <div class="cn-contra">
+        <div class="cn-contra-lbl">△ Widerspruch</div>
+        Ferritin 20 bei Amenorrhoe → keine i.v. Eisensubstitution initiiert.
+      </div>
+    </div>
+  </div>
+  <div class="cn-gap">
+    <div class="cn-gap-track"><div class="cn-gap-dash"></div><div class="cn-gap-arr">↓</div></div>
+    <span class="cn-gap-lbl">+5 Monate</span>
+  </div>
+
+  <div class="cn" style="margin-bottom:4px">
+    <div class="cn-card" style="background:var(--sig-bg);border-color:var(--sig-bd)">
+      <div class="cn-dot cnd-sig" style="background:var(--sig)"></div>
+      <div class="cn-yr" style="color:var(--sig)">Mrz 2026 — AKTUELLER ZUSTAND</div>
+      <div class="cn-ttl" style="color:var(--sig)">Funktioneller Kollaps · SCHWER</div>
+      <div class="cn-body">Bettlägerig · Schulausfall · POTS gesichert · Nachtlachanfälle ungeklärt · 6 Fachstellen · kein Lead-Arzt</div>
+      <span class="cn-tag ct-sig">ICC 2011 alle Kriterien · SCHWER</span>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     CENTER — REASONING GRAPH (NAVORA style)
+════════════════════════════════════════ -->
+<div class="graph-wrap">
+  <div class="gw-label">Multisystem Pathologie — Reasoning Graph</div>
+  <canvas id="rcv"></canvas>
+  <div class="gw-legend">
+    <span class="gw-leg-item"><span class="gw-leg-dot" style="border-color:var(--sig)"></span>Gesichert / Trigger</span>
+    <span class="gw-leg-item"><span class="gw-leg-dot" style="border-color:var(--warn)"></span>Verdacht</span>
+    <span class="gw-leg-item"><span class="gw-leg-dot" style="border-color:var(--unk)"></span>Symptom-Cluster</span>
+    <span class="gw-leg-item"><span class="gw-leg-dot" style="border-color:var(--intel)"></span>Mechanismus</span>
+    <span class="gw-leg-item"><span class="gw-leg-line" style="background:var(--navy3)"></span>Kausal</span>
+    <span class="gw-leg-item"><span class="gw-leg-line" style="background:var(--t3);opacity:.5"></span>Hypothetisch</span>
+  </div>
+  <div class="ntip" id="ntip">
+    <div class="ntip-t" id="ntip-t"></div>
+    <div class="ntip-b" id="ntip-b"></div>
+    <div class="ntip-c" id="ntip-c"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     RIGHT — GAP + CONTRADICTION ENGINE
+════════════════════════════════════════ -->
+<div class="gap-panel">
+
+  <div class="gp-sec">
+    <div class="gp-sec-title">Diagnostische Lücken</div>
+    <div class="gi gi-sig">
+      <div class="gi-ttl">Erregerserologie SARS-CoV-2</div>
+      <div class="gi-why">ME/CFS formal blockiert. ICD-Kodierung unmöglich. Nie gemessen.</div>
+      <div class="gi-cons gc-sig">⚑ DIAGNOSE-BLOCKADE</div>
+    </div>
+    <div class="gi gi-sig">
+      <div class="gi-ttl">Basisgerinnung (INR · pTT · Fibrinogen)</div>
+      <div class="gi-why">FA Gerinnungsstörungen positiv + Hämaturie. APS unausgeschlossen.</div>
+      <div class="gi-cons gc-sig">⚑ THROMBOSE-RISIKO</div>
+    </div>
+    <div class="gi gi-sig">
+      <div class="gi-ttl">Lead-Arzt + Koordinationsprotokoll</div>
+      <div class="gi-why">6 Fachstellen, keine Kommunikation. Kontraindikationen nicht weitergegeben.</div>
+      <div class="gi-cons gc-sig">⚑ AKTIVER SCHADEN MÖGLICH</div>
+    </div>
+    <div class="gi gi-warn">
+      <div class="gi-ttl">Tryptase + 24h Methylhistamin</div>
+      <div class="gi-why">MCAS-Trias klinisch (hEDS+POTS+GI) — laborchemisch nie bestätigt.</div>
+      <div class="gi-cons gc-warn">△ THERAPIEOPTION VERPASST</div>
+    </div>
+    <div class="gi gi-warn">
+      <div class="gi-ttl">Neurotransmitter-Rezeptor-AK (Viollier)</div>
+      <div class="gi-why">Anti-adrenerge AK: POTS-Subtyp definiert Pharmakotherapie.</div>
+      <div class="gi-cons gc-warn">△ MECHANISMUS UNBEKANNT</div>
+    </div>
+    <div class="gi gi-warn">
+      <div class="gi-ttl">Anti-CL / Anti-Beta2-GP</div>
+      <div class="gi-why">APS nie ausgeschlossen trotz positiver Familienanamnese + Hämaturie.</div>
+      <div class="gi-cons gc-warn">△ GEFÄSSRISIKO OFFEN</div>
+    </div>
+    <div class="gi gi-intel">
+      <div class="gi-ttl">Beighton-Score + hEDS-Genetik</div>
+      <div class="gi-why">Trias klinisch vollständig erfüllt, Beighton nie formal erhoben.</div>
+      <div class="gi-cons gc-intel">◈ DIAGNOSE VERZÖGERT</div>
+    </div>
+    <div class="gi gi-intel">
+      <div class="gi-ttl">Cortisol-Tagesprofil 4× (Speichel)</div>
+      <div class="gi-why">Einzel-Cortisol ohne Zeitstempel nicht interpretierbar. HPA unklar.</div>
+      <div class="gi-cons gc-intel">◈ VERLAUFS-LÜCKE</div>
+    </div>
+  </div>
+
+  <div class="gp-sec">
+    <div class="gp-sec-title">Aktive Widersprüche</div>
+    <div class="contra">
+      <div class="contra-pair">
+        <div class="cv">Amenorrhoe — kein Blutverlust</div>
+        <div class="cv-vs">vs.</div>
+        <div class="cv">Ferritin 20 · kein i.v. Eisen</div>
+      </div>
+      <div class="contra-int">Eisenverwertungsstörung oder Therapieunterlassung?</div>
+    </div>
+    <div class="contra">
+      <div class="contra-pair">
+        <div class="cv">ME/CFS Kriterien vollständig</div>
+        <div class="cv-vs">vs.</div>
+        <div class="cv">Aktivierungstherapie (Physio)</div>
+      </div>
+      <div class="contra-int">GET direkte Kontraindikation. Aktiver Schaden. Sofort handeln.</div>
+    </div>
+    <div class="contra">
+      <div class="contra-pair">
+        <div class="cv">TSH-Peak 3.83 → 1.60 in 3 Mo.</div>
+        <div class="cv-vs">vs.</div>
+        <div class="cv">FT4 konstant normal</div>
+      </div>
+      <div class="contra-int">Autonome TSH-Dysregulation — nicht klassische Hypothyreose.</div>
+    </div>
+  </div>
+
+  <div class="gp-sec">
+    <div class="gp-sec-title">Koordinations-Risiken</div>
+    <div class="coo">
+      <div class="coo-r">Physiotherapie (aktiv)</div>
+      <div class="coo-t">Aktivierungsprotokoll trotz ME/CFS → PEM aktiv. Nicht informiert.</div>
+    </div>
+    <div class="coo">
+      <div class="coo-r">Psychotherapie (aktiv)</div>
+      <div class="coo-t">Kognitive Aktivierung kontraindiziert. ME/CFS-Info fehlt.</div>
+    </div>
+    <div class="coo">
+      <div class="coo-r">ME/CFS-Spezial (Inselspital/USZ)</div>
+      <div class="coo-t">Nicht eingeleitet. Formale Diagnose blockiert Zugang.</div>
+    </div>
+  </div>
+
+</div>
+</div><!-- /engine -->
+
+<!-- ════════════════════════════════════════
+     BOTTOM
+════════════════════════════════════════ -->
+<div class="bottom">
+
+  <div class="bp" style="flex:1.4">
+    <div class="bp-title">Funktioneller Kollaps — 5-Jahres-Trajektorie</div>
+    <div class="chart-wrap">
+      <canvas id="cc" class="c" role="img" aria-label="Funktionelle Kapazität sinkt von 90% auf 8% zwischen 2019 und 2026">Kapazität: 90% (2019) → 8% (Mrz 2026)</canvas>
+    </div>
+  </div>
+
+  <div class="bp" style="flex:0.85">
+    <div class="bp-title">Funktionsdomänen aktuell</div>
+    <div class="fd" id="fd"></div>
+  </div>
+
+  <div class="bp" style="flex:1.5">
+    <div class="bp-title">Biomarker-Stabilität — Longitudinal</div>
+    <div class="bm" id="bm"></div>
+  </div>
+
+  <div class="bp" style="flex:0.85">
+    <div class="bp-title">Systemlast-Index</div>
+    <div class="sxi" style="margin-top:4px">
+      <div class="sxi-row"><div class="sxi-hd"><span>Systemische Ausdehnung</span><span style="color:var(--sig)">8/9</span></div><div class="sxi-track"><div class="sxi-fill" style="width:88%;background:var(--sig)"></div></div></div>
+      <div class="sxi-row"><div class="sxi-hd"><span>Diagn. Lücken</span><span style="color:var(--sig)">9</span></div><div class="sxi-track"><div class="sxi-fill" style="width:82%;background:var(--sig)"></div></div></div>
+      <div class="sxi-row"><div class="sxi-hd"><span>Koordinationsdefizit</span><span style="color:var(--warn)">4/6</span></div><div class="sxi-track"><div class="sxi-fill" style="width:67%;background:var(--warn)"></div></div></div>
+      <div class="sxi-row"><div class="sxi-hd"><span>Biol. Instabilität</span><span style="color:var(--warn)">Hoch</span></div><div class="sxi-track"><div class="sxi-fill" style="width:75%;background:var(--warn)"></div></div></div>
+      <div class="sxi-row"><div class="sxi-hd"><span>Kontraindikationen</span><span style="color:var(--sig)">Aktiv</span></div><div class="sxi-track"><div class="sxi-fill" style="width:100%;background:var(--sig)"></div></div></div>
+      <div style="margin-top:6px;padding:7px 9px;background:var(--sig-bg);border:1px solid var(--sig-bd);border-radius:var(--rs);font-size:9px;color:var(--sig);line-height:1.5">
+        <strong>Post-COVID → autonom → strukturell.</strong> Ein kausal verbundenes System — kein isoliertes Einzelproblem.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ══════════════════════════════════════════════
+   COLOR HELPERS
+══════════════════════════════════════════════ */
+const CS={
+  sig:'#a02020',warn:'#9c6010',conf:'#0d6040',
+  intel:'#1848a0',unk:'#5030a0',gold:'#b48c28',
+  navy:'#1a2438',navy2:'#2e3c64',
+  t1:'#1a2438',t2:'#4a5870',t3:'#8090a8',t4:'#c8d4e0',
+  bg:'#f4f2ec',bg2:'#eeecea',border:'#e2ddd4',border2:'#cec8bc',
+  surface:'#ffffff',surface2:'#faf9f5',
+};
+function hex2rgba(h,a){
+  const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);
+  return`rgba(${r},${g},${b},${a})`;
+}
+
+/* ══════════════════════════════════════════════
+   REASONING GRAPH — NAVORA network aesthetic
+   Thin lines · light nodes · gold glow at center
+══════════════════════════════════════════════ */
+const canvas=document.getElementById('rcv');
+let W,H;
+function rsz(){W=canvas.parentElement.offsetWidth;H=canvas.parentElement.offsetHeight;canvas.width=W;canvas.height=H;drawGraph();}
+
+const NODES=[
+  {id:'covid',   lbl:'Post-COVID\nTrigger',     px:.50,py:.14, r:24, col:CS.sig,  conf:.85, info:'COVID-Infektion 2021 — nie serologisch bestätigt. Trigger für autonome Dysregulation. Zentrale Hypothese.'},
+  {id:'autonom', lbl:'Autonome\nDysregulation', px:.31,py:.34, r:20, col:CS.sig,  conf:.90, info:'Autonomes NS destabilisiert post-COVID. Basis für POTS, cerebrale Hypoperfusion, PEM.'},
+  {id:'neuro',   lbl:'Neuroinflammation\nME/CFS',px:.67,py:.34,r:19, col:CS.sig,  conf:.88, info:'Post-infektiöse Neuroinflammation. ICC 2011 alle Kriterien erfüllt. Formal nicht kodiert (Serologie fehlt).'},
+  {id:'heds',    lbl:'hEDS\nStruktur',           px:.84,py:.16, r:16, col:CS.warn, conf:.75, info:'Hypermobiles EDS — strukturelle Vulnerabilität. Klinische Trias. Beighton-Score nie formal erhoben.'},
+  {id:'pots',    lbl:'POTS',                     px:.17,py:.52, r:17, col:CS.sig,  conf:.95, info:'Gesichert (Schellong+). Orthostase, Tachykardie. HR-Monitoring fehlt — PEM-Schutz nicht implementiert.'},
+  {id:'pem',     lbl:'PEM',                      px:.50,py:.56, r:19, col:CS.sig,  conf:.90, info:'Post-Exertional Malaise. Schwer. Threshold: Ruhepuls +15. Kein Pacing. GET läuft — aktiver Schaden.'},
+  {id:'mcas',    lbl:'MCAS\nVerdacht',            px:.76,py:.50, r:14, col:CS.warn, conf:.60, info:'Klinische Trias (hEDS+POTS+GI) erfüllt. Tryptase/Methylhistamin nie gemessen. Therapeutische Option verpasst.'},
+  {id:'hypo_c',  lbl:'Cerebrale\nHypoperf.',     px:.22,py:.67, r:13, col:CS.intel,conf:.85, info:'POTS → cerebrale Unterperfusion. Erklärt cognitive symptoms, Kopfschmerz, Konzentration ↓.'},
+  {id:'cog',     lbl:'Kognition ↓\nBrain Fog',   px:.38,py:.78, r:13, col:CS.unk,  conf:.90, info:'Cerebrale Hypoperfusion + PEM-bedingt. Schulausfall total. Kognitiver Crash nach minimaler Belastung.'},
+  {id:'fatigue', lbl:'Schwere\nFatigue',          px:.64,py:.74, r:14, col:CS.unk,  conf:.95, info:'Bettlägerig. 5–10% normale Kapazität. Nicht erholsam. ICC-Kriterium erfüllt.'},
+  {id:'pool',    lbl:'Venöses\nPooling',          px:.88,py:.40, r:11, col:CS.warn, conf:.70, info:'hEDS → venöses Pooling → verstärkt POTS-Symptomatik. Orthostase-Aggravation.'},
+  {id:'micro',   lbl:'Mikronährstoff-\nmangel',  px:.08,py:.36, r:12, col:CS.warn, conf:.95, info:'Ferritin 20 · VitD 28 nmol/L · K 3.4 · Folsäure ↓. Systemische Verstärker ohne ausreichende Therapie.'},
+  {id:'sleep',   lbl:'Schlaf-\ndysfunktion',     px:.80,py:.72, r:11, col:CS.unk,  conf:.85, info:'Nicht erholsamer Schlaf. Nachtlachanfälle Mrz 2026 neurologisch ungeklärt.'},
+  {id:'immune',  lbl:'Immun-\ninstabilität',     px:.56,py:.20, r:13, col:CS.warn, conf:.75, info:'Leukopenie Mai 2024 (Ätiologie offen). IgE ↑ ohne Sensibilisierung. EBV nie vollständig.'},
+  {id:'gi',      lbl:'GI\nDysmotilität',         px:.64,py:.86, r:10, col:CS.unk,  conf:.80, info:'GI-Symptome konsistent mit MCAS und autonomer Dysfunktion.'},
+];
+
+const EDGES=[
+  {a:'covid',  b:'autonom', type:'causal', str:.90},
+  {a:'covid',  b:'neuro',   type:'causal', str:.85},
+  {a:'covid',  b:'immune',  type:'causal', str:.70},
+  {a:'heds',   b:'pots',    type:'causal', str:.70},
+  {a:'heds',   b:'mcas',    type:'causal', str:.75},
+  {a:'heds',   b:'pool',    type:'causal', str:.80},
+  {a:'autonom',b:'pots',    type:'causal', str:.90},
+  {a:'autonom',b:'pem',     type:'causal', str:.85},
+  {a:'neuro',  b:'pem',     type:'causal', str:.90},
+  {a:'neuro',  b:'fatigue', type:'causal', str:.90},
+  {a:'neuro',  b:'sleep',   type:'causal', str:.80},
+  {a:'pots',   b:'hypo_c',  type:'causal', str:.85},
+  {a:'pots',   b:'pem',     type:'causal', str:.80},
+  {a:'pool',   b:'pots',    type:'causal', str:.70},
+  {a:'hypo_c', b:'cog',     type:'causal', str:.85},
+  {a:'pem',    b:'cog',     type:'causal', str:.85},
+  {a:'pem',    b:'fatigue', type:'causal', str:.90},
+  {a:'mcas',   b:'gi',      type:'hypo',   str:.60},
+  {a:'mcas',   b:'fatigue', type:'hypo',   str:.50},
+  {a:'micro',  b:'pots',    type:'hypo',   str:.60},
+  {a:'micro',  b:'neuro',   type:'hypo',   str:.50},
+  {a:'sleep',  b:'fatigue', type:'causal', str:.70},
+  {a:'gi',     b:'fatigue', type:'causal', str:.50},
+  {a:'immune', b:'neuro',   type:'hypo',   str:.50},
+];
+
+function nxy(n){return{x:n.px*W,y:n.py*H}}
+
+function drawGraph(){
+  if(!W||!H)return;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+
+  // Very subtle grid — matches NAVORA network feel
+  ctx.strokeStyle='rgba(200,195,185,0.35)';ctx.lineWidth=0.5;
+  for(let x=0;x<W;x+=60){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}
+  for(let y=0;y<H;y+=60){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+
+  // Central gold glow — NAVORA convergence point (where Post-COVID sits)
+  const center=NODES.find(n=>n.id==='covid');
+  if(center){
+    const{x,y}=nxy(center);
+    const grd=ctx.createRadialGradient(x,y,0,x,y,110);
+    grd.addColorStop(0,'rgba(184,140,40,0.14)');
+    grd.addColorStop(.4,'rgba(180,136,40,0.06)');
+    grd.addColorStop(1,'transparent');
+    ctx.beginPath();ctx.arc(x,y,110,0,Math.PI*2);
+    ctx.fillStyle=grd;ctx.fill();
+  }
+
+  // Edges — thin, elegant, NAVORA style
+  EDGES.forEach(e=>{
+    const na=NODES.find(n=>n.id===e.a),nb=NODES.find(n=>n.id===e.b);
+    if(!na||!nb)return;
+    const pa=nxy(na),pb=nxy(nb);
+    const dx=pb.x-pa.x,dy=pb.y-pa.y,len=Math.sqrt(dx*dx+dy*dy);
+    const ux=dx/len,uy=dy/len;
+    const x1=pa.x+ux*na.r,y1=pa.y+uy*na.r;
+    const x2=pb.x-ux*(nb.r+5),y2=pb.y-uy*(nb.r+5);
+
+    // Edge color: causal = dark navy (elegant), hypo = light grey
+    const edgeCol=e.type==='causal'
+      ?`rgba(42,60,100,${e.str*.45})`
+      :`rgba(120,140,160,${e.str*.35})`;
+
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);
+    ctx.strokeStyle=edgeCol;
+    ctx.lineWidth=e.type==='causal'?1.2:.8;
+    ctx.setLineDash(e.type==='causal'?[]:[4,4]);
+    ctx.stroke();ctx.setLineDash([]);
+
+    // Arrow tip
+    ctx.beginPath();
+    const ax=x2-ux*4,ay=y2-uy*4;
+    ctx.moveTo(ax+uy*3,ay-ux*3);ctx.lineTo(x2,y2);ctx.lineTo(ax-uy*3,ay+ux*3);
+    ctx.fillStyle=edgeCol;ctx.fill();
+  });
+
+  // Nodes — NAVORA style: clean circles, light fills, navy/colored borders
+  NODES.forEach(n=>{
+    const{x,y}=nxy(n);
+    const col=n.col;
+
+    // Uncertainty ring for low confidence
+    if(n.conf<.75){
+      ctx.beginPath();ctx.arc(x,y,n.r+5,0,Math.PI*2);
+      ctx.strokeStyle=hex2rgba(col,.15);
+      ctx.lineWidth=1;ctx.setLineDash([3,4]);ctx.stroke();ctx.setLineDash([]);
+    }
+
+    // Node fill — very light tint
+    ctx.beginPath();ctx.arc(x,y,n.r,0,Math.PI*2);
+    ctx.fillStyle=hex2rgba(col,.08+n.conf*.06);
+    ctx.strokeStyle=hex2rgba(col,.5+n.conf*.4);
+    ctx.lineWidth=n.conf>.85?1.8:1.2;
+    ctx.fill();ctx.stroke();
+
+    // Inner gold dot for high-confidence nodes (NAVORA accent)
+    if(n.conf>=.85){
+      ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);
+      ctx.fillStyle=n.id==='covid'?CS.gold:hex2rgba(col,.8);
+      ctx.fill();
+    }
+
+    // Label — clean, small, navy
+    const sz=n.r>17?10:9;
+    ctx.font=`400 ${sz}px DM Sans,system-ui`;
+    ctx.textAlign='center';
+    ctx.fillStyle=hex2rgba(CS.t1,.7+n.conf*.2);
+    const lines=n.lbl.split('\n');
+    if(lines.length===1){
+      ctx.fillText(n.lbl,x,y+n.r+12);
+    } else {
+      lines.forEach((l,i)=>ctx.fillText(l,x,y+n.r+11+i*10));
+    }
+  });
+}
+
+// Tooltip
+canvas.addEventListener('mousemove',ev=>{
+  const rect=canvas.getBoundingClientRect();
+  const mx=ev.clientX-rect.left,my=ev.clientY-rect.top;
+  const tt=document.getElementById('ntip');
+  let hit=null;
+  NODES.forEach(n=>{const{x,y}=nxy(n);if(Math.sqrt((mx-x)**2+(my-y)**2)<n.r+8)hit=n;});
+  if(hit){
+    document.getElementById('ntip-t').textContent=hit.lbl.replace('\n',' ');
+    document.getElementById('ntip-b').textContent=hit.info;
+    document.getElementById('ntip-c').textContent=`Konfidenz: ${Math.round(hit.conf*100)}%`;
+    tt.style.display='block';
+    tt.style.left=Math.min(mx+14,W-225)+'px';
+    tt.style.top=Math.max(my-44,8)+'px';
+  } else tt.style.display='none';
+});
+canvas.addEventListener('mouseleave',()=>document.getElementById('ntip').style.display='none');
+rsz();window.addEventListener('resize',rsz);
+
+/* ══════════════════════════════════════════════
+   COLLAPSE CHART
+══════════════════════════════════════════════ */
+(()=>{
+  const years=['2019','Q1\'21','Q3\'21','2022','Q1\'23','Q3\'23','Q1\'24','Q3\'24','Q1\'25','Q3\'25','Q1\'26','Mrz\'26'];
+  const actual=[90,85,70,55,40,32,28,24,22,18,12,8];
+  const counter=[90,85,75,65,55,50,46,44,40,38,35,32];
+  new Chart(document.getElementById('cc').getContext('2d'),{
+    type:'line',
+    data:{
+      labels:years,
+      datasets:[
+        {
+          label:'Tatsächliche Kapazität',data:actual,
+          borderColor:'rgba(160,32,32,.85)',backgroundColor:'rgba(160,32,32,.06)',
+          fill:true,pointRadius:3,pointBackgroundColor:'rgba(160,32,32,.9)',
+          borderWidth:1.8,tension:.35,
+        },
+        {
+          label:'Ohne Versorgungslücken (hypothetisch)',data:counter,
+          borderColor:'rgba(180,140,40,.4)',backgroundColor:'transparent',
+          fill:false,pointRadius:0,borderWidth:1.2,
+          borderDash:[4,4],tension:.35,
+        }
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:'#8090a8',font:{size:8,family:'DM Mono'}},grid:{color:'rgba(200,195,185,.3)'},border:{color:'#e2ddd4'}},
+        y:{min:0,max:100,ticks:{color:'#8090a8',font:{size:8,family:'DM Mono'},callback:v=>v+'%'},grid:{color:'rgba(200,195,185,.3)'},border:{color:'#e2ddd4'}}
+      },
+      animation:{duration:0},
+    }
+  });
+})();
+
+/* ══════════════════════════════════════════════
+   FUNCTIONAL DOMAINS
+══════════════════════════════════════════════ */
+(()=>{
+  const doms=[
+    {l:'Aktivität',v:10,c:'#a02020'},
+    {l:'Kognition',v:15,c:'#a02020'},
+    {l:'Orthostat.',v:20,c:'#a02020'},
+    {l:'Schlaf',v:20,c:'#9c6010'},
+    {l:'Sensorik',v:28,c:'#9c6010'},
+    {l:'Sozial',v:8,c:'#a02020'},
+    {l:'Schule',v:0,c:'#a02020'},
+  ];
+  const fd=document.getElementById('fd');
+  doms.forEach(d=>{
+    const col=document.createElement('div');
+    col.className='fd-col';
+    col.innerHTML=`
+      <div class="fd-bg">
+        <div class="fd-fill" style="height:${Math.max(d.v,1)}%;background:${d.c};opacity:.75"></div>
+      </div>
+      <div class="fd-v" style="color:${d.c}">${d.v}%</div>
+      <div class="fd-n">${d.l}</div>
+    `;
+    fd.appendChild(col);
+  });
+})();
+
+/* ══════════════════════════════════════════════
+   BIOMARKER SPARKLINES
+══════════════════════════════════════════════ */
+const BMS=[
+  {n:'Ferritin µg/L',   data:[65,55,42,38,25,20], ref:[30,200],val:'20',   s:'INSTABIL',sc:'bs-bad'},
+  {n:'Vitamin D nmol/L',data:[45,40,35,32,30,28], ref:[75,200],val:'28',   s:'INSTABIL',sc:'bs-bad'},
+  {n:'Kalium mmol/L',   data:[3.8,3.7,3.6,3.5,3.4,3.4],ref:[3.5,5.1],val:'3.4',s:'GRENZW.',sc:'bs-brd'},
+  {n:'TSH mU/L',        data:[1.8,2.1,2.8,3.83,2.1,1.6],ref:[.4,4.0],val:'1.60↕',s:'FLUKT.',sc:'bs-brd'},
+  {n:'COVID-IgG',       data:[],ref:[],val:'FEHLT',s:'FEHLT',sc:'bs-mis'},
+  {n:'Anti-CL/Beta2-GP',data:[],ref:[],val:'FEHLT',s:'FEHLT',sc:'bs-mis'},
+  {n:'Tryptase/MeHist.',data:[],ref:[],val:'FEHLT',s:'FEHLT',sc:'bs-mis'},
+];
+const bmg=document.getElementById('bm');
+BMS.forEach(b=>{
+  const row=document.createElement('div');row.className='bm-row';
+  const nm=document.createElement('div');nm.className='bm-n';nm.textContent=b.n;
+  const sp=document.createElement('div');sp.className='bm-sp';
+  if(b.data.length>0){
+    const c=document.createElement('canvas');c.height=22;
+    sp.appendChild(c);
+    setTimeout(()=>{
+      c.width=sp.offsetWidth||120;
+      const ctx=c.getContext('2d');const W2=c.width,H2=22;
+      const mn=Math.min(...b.data,b.ref[0]*.88),mx=Math.max(...b.data,b.ref[1]*1.06);
+      const px=i=>3+i*(W2-6)/(b.data.length-1);
+      const py=v=>H2-3-(v-mn)/(mx-mn)*(H2-6);
+      // ref zone
+      ctx.fillStyle='rgba(13,96,64,.1)';
+      const ryH=py(b.ref[1]),ryL=py(b.ref[0]);
+      ctx.fillRect(0,Math.min(ryH,ryL),W2,Math.abs(ryL-ryH));
+      // sparkline
+      ctx.beginPath();b.data.forEach((v,i)=>i===0?ctx.moveTo(px(i),py(v)):ctx.lineTo(px(i),py(v)));
+      const last=b.data[b.data.length-1];
+      const ok=last>=b.ref[0]&&last<=b.ref[1];
+      ctx.strokeStyle=ok?CS.conf:CS.sig;ctx.lineWidth=1.5;ctx.stroke();
+      ctx.beginPath();ctx.arc(px(b.data.length-1),py(last),2.5,0,Math.PI*2);
+      ctx.fillStyle=ok?CS.conf:CS.sig;ctx.fill();
+    },150);
+  } else {
+    sp.style.display='flex';sp.style.alignItems='center';
+    const m=document.createElement('span');
+    m.style.cssText='font-size:9px;color:#8090a8;font-family:DM Mono,monospace;opacity:.7';
+    m.textContent='── nie gemessen ──';sp.appendChild(m);
+  }
+  const vl=document.createElement('div');vl.className='bm-v';
+  vl.style.color=b.sc==='bs-mis'?CS.unk:b.sc==='bs-bad'?CS.sig:CS.warn;
+  vl.textContent=b.val;
+  const st=document.createElement('div');st.className=`bm-s ${b.sc}`;st.textContent=b.s;
+  row.appendChild(nm);row.appendChild(sp);row.appendChild(vl);row.appendChild(st);
+  bmg.appendChild(row);
+});
+</script>
+</body>
+</html>
